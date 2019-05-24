@@ -1,0 +1,133 @@
+---
+title: "Reproducible_Research_PA1"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+## Loading and preprocessing the data
+1. Load the data
+```{r load_data, echo=TRUE}
+df <- read.csv("activity.csv")
+```
+
+2. Process the data
+```{r process_data, echo=TRUE}
+head(df)
+summary(df)
+#The format looks no problem to analyze.
+```
+
+
+## What is mean total number of steps taken per day?
+1. Make a histgram
+```{r histgram, echo=TRUE}
+#aggregate each day's step
+StepsPerDay <- aggregate(x=df$steps, by=list(df$date), FUN=sum)
+
+#make histgram
+hist(StepsPerDay$x)
+```
+
+2. Calculate and report mean and median
+```{r mean_and_median1, echo=TRUE}
+mean1 <- mean(StepsPerDay$x, na.rm = TRUE)
+median1 <- median(StepsPerDay$x, na.rm = TRUE)
+
+mean1
+median1
+```
+
+
+## What is the average daily activity pattern?
+1. Make a time series plot
+```{r time_series_plot1, echo=TRUE}
+AverageSteps <- aggregate(steps~interval, df, FUN=mean)
+plot(x=AverageSteps$interval, y=AverageSteps$steps, type="l")
+```
+
+2. Which 5-minute interval is maximum steps?
+```{r maximum_steps, echo=TRUE}
+which.max(AverageSteps$steps)
+#The answer is 104th row. Check 104 row.
+AverageSteps$interval[104]
+#The answer is AM8:35.
+```
+
+
+## Imputing missing values
+1. Calculate total number of missing value
+```{r missing_value, echo=TRUE}
+table(is.na(df))
+#The number of NA is 2304.
+```
+
+2. Make a new dataset which filled missing value
+My strategy is fill NA by average 5-minute interval value.
+```{r create_new_dataset, echo=TRUE}
+df2 <- cbind(df, AverageSteps$steps)
+df2$steps[is.na(df2$steps)] <- df2$`AverageSteps$steps`
+df2$`AverageSteps$steps` <- NULL
+head(df2)
+```
+
+3. Make a histgram of the total number of steps taken each day
+```{r histgram_and_mean_and_median, echo=TRUE}
+#aggregate each day's step
+StepsPerDay2 <- aggregate(steps~date, df2, FUN=sum)
+
+#make histgram
+hist(StepsPerDay2$steps)
+```
+
+4. Calculate mean and median total number of steps taken per day
+```{r mean_and_median2, echo=TRUE}
+#mean and median
+mean2 <- mean(StepsPerDay2$steps)
+median2 <- median(StepsPerDay2$steps)
+
+#compare result by first assignment.
+mean2 - mean1
+#mean is not change because only add average value.
+
+median2 - median1
+#median is a little bit change because the center is moved by filled value.
+```
+I got interesting result which difference of data filled of not.
+In this time I filled missing data by 61 days average 5-mintute interval data.
+Because of that the distribution of number of steps taken per day's mean and median don't change so mach.
+But if it is filled by not suitable value, the distribution will change and lost the meaning of data.
+So I think the impact of imputing missing data is significant and should do very carefully.
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+1. Create a new factor variable "weekday(TRUE)" and "weekend(FALSE)"
+```{r new_factor_variable, echo=TRUE}
+library(timeDate)
+df3 <- df2
+df3$weekday <- isWeekday(df2$date)
+head(df3)
+```
+
+2. Make a panel plot
+```{r panel_plot, echo=TRUE}
+#prepare two of dataset
+df_weekday <- subset(df3, df3$weekday=="TRUE")
+df_weekdayMean <-aggregate(steps~interval, df_weekday, FUN=mean)
+
+df_weekend <- subset(df3, df3$weekday=="FALSE")
+df_weekendMean <-aggregate(steps~interval, df_weekend, FUN=mean)
+
+#make panel plot
+par(mfrow=c(2,1))
+plot(x=df_weekdayMean$interval, y=df_weekdayMean$steps, main="Weekday", type="l")
+plot(x=df_weekendMean$interval, y=df_weekendMean$steps, main="Weekend", type="l")
+```
+
+
+
+
+
+It looks different.
+At weekend daytime steps is high, that is, at weekend the person walk actively.
